@@ -404,7 +404,7 @@
         document.getElementById('expDate').value = todayStr();
         render();
         const auth = JSON.parse(localStorage.getItem('famAuth') || 'null');
-        if (auth && auth.refreshToken) { pullCloud(); }
+        if (auth && auth.refreshToken) { overlay.style.display = 'none'; pullCloud(); }
         else { showLogin(); }
         setInterval(pullCloud, 3000);
     </script>
