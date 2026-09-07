@@ -85,6 +85,24 @@
         .history-item { display: flex; justify-content: space-between; padding: 8px 6px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
         .history-item:hover { background: #f0f0f0; }
         .history-item .h-date { font-weight: bold; color: #16a085; }
+        .section {
+            border-radius: 10px;
+            margin-bottom: 14px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        .section-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; color: #fff; font-weight: bold; font-size: 14px;
+        }
+        .section-fixed .section-head { background: #16a085; }
+        .section-var .section-head { background: #e67e22; }
+        .section-total { font-size: 13px; opacity: 0.9; }
+        .section ul { background: #f8f9fa; padding: 0 12px; }
+        .section .empty { background: #f8f9fa; }
+        .section-count {
+            background: #f8f9fa; color: #555; font-size: 13px; text-align: center; padding: 8px;
+        }
         #codeOverlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 100;
@@ -150,16 +168,20 @@
                 <span id="sumSalary">اضبط راتبك أول</span>
             </div>
 
-            <div class="card">
-                <h2>⬇️ الثابت (نت + ايبال + فواتير)</h2>
+            <div class="section section-fixed">
+                <div class="section-head">
+                    <span>⬇️ الثابت</span>
+                    <span class="section-total" id="fixedTotal"></span>
+                </div>
                 <ul id="fixedList"></ul>
-                <div class="count" id="fixedTotal"></div>
             </div>
 
-            <div class="card">
-                <h2>📝 المتغير</h2>
+            <div class="section section-var">
+                <div class="section-head">
+                    <span>📝 المتغير</span>
+                    <span class="section-total" id="varTotal"></span>
+                </div>
                 <ul id="varList"></ul>
-                <div class="count" id="varTotal"></div>
             </div>
 
             <div class="card">
@@ -358,7 +380,7 @@
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 fList.appendChild(li);
             });
-            document.getElementById('fixedTotal').textContent = fixedList.length ? `المجموع: ${fixedSum}` : '';
+            document.getElementById('fixedTotal').textContent = fixedList.length ? `المجموع: ${fixedSum} ريال` : '';
 
             const vList = document.getElementById('varList');
             vList.innerHTML = varList.length ? '' : '<li class="empty">لا مصاريف متغيرة في هذا اليوم</li>';
@@ -369,7 +391,7 @@
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 vList.appendChild(li);
             });
-            document.getElementById('varTotal').textContent = varList.length ? `المجموع: ${varSum}` : '';
+            document.getElementById('varTotal').textContent = varList.length ? `المجموع: ${varSum} ريال` : '';
 
             const hList = document.getElementById('historyList');
             const dates = [...new Set(records.map(r => r.date))].sort().reverse();
