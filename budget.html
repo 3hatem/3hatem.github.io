@@ -56,6 +56,8 @@
         }
         .btn-primary { background: #16a085; }
         .btn-primary:hover { background: #11998e; }
+        .btn-warning { background: #e67e22; }
+        .btn-warning:hover { background: #d35400; }
         .btn-danger { background: #e74c3c; }
         .btn-danger:hover { background: #c0392b; }
         .btn-small { padding: 6px 12px; font-size: 13px; }
@@ -143,18 +145,36 @@
                 <div class="count" id="salarySaved"></div>
             </div>
 
-            <div class="card">
-                <h2>➕ إضافة مصروف</h2>
-                <div class="exp-input-row">
-                    <input type="date" id="expDate" />
-                    <input type="text" id="expName" placeholder="الاسم (نت، سوق، بنزين...)" />
-                    <input type="number" id="expAmount" placeholder="المبلغ" min="0" />
+            <div class="section section-fixed">
+                <div class="section-head">
+                    <span>⬇️ مصروف ثابت</span>
                 </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <button class="btn btn-primary btn-small" onclick="addExpense('fixed')">⬅️ ثابت</button>
-                    <button class="btn btn-primary btn-small" onclick="addExpense('var')">📝 متغير</button>
+                <div style="background:#f8f9fa;padding:12px">
+                    <div class="exp-input-row">
+                        <input type="date" id="fixedDate" />
+                        <input type="text" id="fixedName" placeholder="الاسم (نت، ايبال، فاتورة...)" />
+                        <input type="number" id="fixedAmount" placeholder="المبلغ" min="0" />
+                    </div>
+                    <button class="btn btn-primary btn-small" onclick="addExpense('fixed')" style="width:100%">إضافة ثابت</button>
+                    <div class="count" id="recFixedTotal"></div>
                 </div>
-                <div class="count">الثابت: نت/ايبال/فواتير الدائمة 🌐 | المتغير: بنزين/سوق/سواها 🛒</div>
+                <ul id="recFixedList"></ul>
+            </div>
+
+            <div class="section section-var">
+                <div class="section-head">
+                    <span>📝 مصروف متغير</span>
+                </div>
+                <div style="background:#f8f9fa;padding:12px">
+                    <div class="exp-input-row">
+                        <input type="date" id="varDate" />
+                        <input type="text" id="varName" placeholder="الاسم (بنزين، سوق، سواها...)" />
+                        <input type="number" id="varAmount" placeholder="المبلغ" min="0" />
+                    </div>
+                    <button class="btn btn-warning btn-small" onclick="addExpense('var')" style="width:100%">إضافة متغير</button>
+                    <div class="count" id="recVarTotal"></div>
+                </div>
+                <ul id="recVarList"></ul>
             </div>
         </div>
 
@@ -330,22 +350,60 @@
         }
 
         function addExpense(kind) {
-            const date = document.getElementById('expDate').value || todayStr();
-            const name = document.getElementById('expName').value.trim();
-            const amount = parseFloat(document.getElementById('expAmount').value);
+            const dateId = kind === 'fixed' ? 'fixedDate' : 'varDate';
+            const nameId = kind === 'fixed' ? 'fixedName' : 'varName';
+            const amountId = kind === 'fixed' ? 'fixedAmount' : 'varAmount';
+            const date = document.getElementById(dateId).value || todayStr();
+            const name = document.getElementById(nameId).value.trim();
+            const amount = parseFloat(document.getElementById(amountId).value);
             if (!name || isNaN(amount)) { alert('اكتب الاسم والمبلغ'); return; }
             records.push({ date, name, amount, kind, id: Date.now() + Math.random() });
             saveRecords();
-            document.getElementById('expName').value = '';
-            document.getElementById('expAmount').value = '';
+            document.getElementById(nameId).value = '';
+            document.getElementById(amountId).value = '';
             document.getElementById('salarySaved').textContent = '';
             alert('تمت الإضافة وحُفظت ✅');
+            render();
+            renderRecordLists();
         }
+
+        function renderRecordLists() {
+            const fixedDate = document.getElementById('fixedDate').value || todayStr();
+            const varDate = document.getElementById('varDate').value || todayStr();
+            const fixed = records.filter(r => r.date === fixedDate && r.kind === 'fixed');
+            const vars = records.filter(r => r.date === varDate && r.kind === 'var');
+
+            const fList = document.getElementById('recFixedList');
+            fList.innerHTML = fixed.length ? '' : '<li class="empty">لا مصاريف ثابتة في هذا التاريخ</li>';
+            fixed.forEach(r => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
+                    <span class="exp-amount">${r.amount}</span>
+                    <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
+                fList.appendChild(li);
+            });
+            document.getElementById('recFixedTotal').textContent = fixed.length ? `المجموع: ${sum(fixed)} دينار` : '';
+
+            const vList = document.getElementById('recVarList');
+            vList.innerHTML = vars.length ? '' : '<li class="empty">لا مصاريف متغيرة في هذا التاريخ</li>';
+            vars.forEach(r => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
+                    <span class="exp-amount">${r.amount}</span>
+                    <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
+                vList.appendChild(li);
+            });
+            document.getElementById('recVarTotal').textContent = vars.length ? `المجموع: ${sum(vars)} دينار` : '';
+        }
+
+        document.getElementById('fixedDate').addEventListener('change', renderRecordLists);
+        document.getElementById('varDate').addEventListener('change', renderRecordLists);
 
         function delRecord(id) {
             records = records.filter(r => r.id !== id);
             saveRecords();
             render();
+            renderRecordLists();
         }
 
         function sum(list) { return list.reduce((a, b) => a + b.amount, 0); }
@@ -423,8 +481,10 @@
         }
 
         document.getElementById('viewDate').value = todayStr();
-        document.getElementById('expDate').value = todayStr();
+        document.getElementById('fixedDate').value = todayStr();
+        document.getElementById('varDate').value = todayStr();
         render();
+        renderRecordLists();
         const auth = JSON.parse(localStorage.getItem('famAuth') || 'null');
         if (auth && auth.refreshToken) { overlay.style.display = 'none'; pullCloud(); }
         else { showLogin(); }
