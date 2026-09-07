@@ -28,27 +28,29 @@
             align-self: flex-start;
         }
         h1 { text-align: center; color: #764ba2; margin-bottom: 20px; font-size: 24px; }
-        .input-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; flex-wrap: nowrap; }
         .input-row input[type="text"] {
-            flex: 1; min-width: 140px; padding: 12px; border: 2px solid #e0e0e0;
-            border-radius: 8px; font-size: 16px; outline: none;
+            flex: 1; min-width: 0; padding: 9px 10px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 15px; outline: none;
         }
         .input-row input:focus { border-color: #764ba2; }
-        .qty-control { display: flex; gap: 6px; align-items: center; }
         .qty-input {
-            width: 60px; padding: 11px 6px; border: 2px solid #e0e0e0;
-            border-radius: 8px; font-size: 15px; text-align: center; outline: none;
+            width: 52px; padding: 9px 4px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 14px; text-align: center; outline: none;
         }
         .qty-input:focus { border-color: #764ba2; }
-        .qty-unit {
-            padding: 10px 8px; border: 2px solid #e0e0e0; border-radius: 8px;
-            font-size: 14px; background: #fff; color: #555; outline: none;
+        .unit-btns { display: flex; gap: 4px; }
+        .unit-btn {
+            padding: 9px 8px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 13px; background: #fff; color: #555; cursor: pointer; font-weight: bold;
+            white-space: nowrap;
         }
+        .unit-btn.active { background: #764ba2; border-color: #764ba2; color: #fff; }
         .btn {
-            padding: 12px 16px; border: none; border-radius: 8px;
-            cursor: pointer; font-size: 16px; color: #fff; transition: 0.2s;
+            padding: 10px 14px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 15px; color: #fff; transition: 0.2s;
         }
-        .btn-add { background: #764ba2; }
+        .btn-add { background: #764ba2; white-space: nowrap; font-weight: bold; }
         .btn-add:hover { background: #667eea; }
         .action-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .btn-action {
@@ -123,14 +125,11 @@
     <div class="container">
         <h1>تفضل يا بوحمد، القائمة جاهزة</h1>
         <div class="input-row">
-            <input type="text" id="taskInput" placeholder="اكتب مهمة جديدة..." />
-            <div class="qty-control">
-                <input type="number" id="qtyInput" class="qty-input" placeholder="كمية" min="0" step="any" />
-                <select id="qtyUnit" class="qty-unit">
-                    <option value="">بدون</option>
-                    <option value="عدد">عدد</option>
-                    <option value="كيلو">كيلو</option>
-                </select>
+            <input type="text" id="taskInput" placeholder="اكتب..." />
+            <input type="number" id="qtyInput" class="qty-input" placeholder="كمية" min="0" step="any" />
+            <div class="unit-btns">
+                <button type="button" class="unit-btn active" data-unit="عدد" onclick="setUnit('عدد', this)">عدد</button>
+                <button type="button" class="unit-btn" data-unit="كيلو" onclick="setUnit('كيلو', this)">كيلو</button>
             </div>
             <button class="btn btn-add" onclick="addTask()">إضافة</button>
         </div>
@@ -166,6 +165,12 @@
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         let currentFilter = 'all';
         let syncing = false;
+        let selectedUnit = 'عدد';
+
+        function setUnit(unit, btn) {
+            selectedUnit = unit;
+            document.querySelectorAll('.unit-btn').forEach(b => b.classList.toggle('active', b === btn));
+        }
 
         const overlay = document.getElementById('codeOverlay');
 
@@ -317,7 +322,7 @@ const categoryKeywords = {
             if (text) {
                 const category = categorize(text);
                 const qty = parseFloat(document.getElementById('qtyInput').value);
-                const unit = document.getElementById('qtyUnit').value;
+                const unit = selectedUnit;
                 tasks.push({ id: Date.now(), text: text, done: false, category: category, qty: isNaN(qty) ? null : qty, unit: unit });
                 input.value = '';
                 document.getElementById('qtyInput').value = '';
