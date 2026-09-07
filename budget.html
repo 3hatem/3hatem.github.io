@@ -81,6 +81,7 @@
         li .exp-amount { font-weight: bold; color: #16a085; white-space: nowrap; }
         li.done .exp-name { text-decoration: line-through; color: #999; }
         .del-btn { background: #e74c3c; border: none; color: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+        .edit-btn { background: #3498db; border: none; color: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
         .count { color: #888; font-size: 13px; text-align: center; margin-top: 6px; }
         .empty { color: #aaa; text-align: center; padding: 14px; }
         .history { max-height: 260px; overflow-y: auto; }
@@ -157,6 +158,7 @@
                     </div>
                     <button class="btn btn-primary btn-small" onclick="addExpense('fixed')" style="width:100%">إضافة ثابت</button>
                     <div class="count" id="recFixedTotal"></div>
+                    <button class="btn btn-primary btn-small" onclick="repeatFixed()" style="width:100%;margin-top:8px;background:#16a085">🔄 تكرار لكل أيام الشهر</button>
                 </div>
                 <ul id="recFixedList"></ul>
             </div>
@@ -186,6 +188,11 @@
 
             <div class="summary" id="summary">
                 <span id="sumSalary">اضبط راتبك أول</span>
+            </div>
+
+            <div class="card" id="monthlyCard" style="display:none">
+                <h2>📅 إجمائي الشهر</h2>
+                <div id="monthlySummary" style="font-size:14px;line-height:1.8"></div>
             </div>
 
             <div class="section section-fixed">
@@ -367,6 +374,39 @@
             renderRecordLists();
         }
 
+        function repeatFixed() {
+            const month = document.getElementById('fixedDate').value || todayStr();
+            const monthPrefix = month.slice(0, 7);
+            const monthFixed = records.filter(r => r.kind === 'fixed' && r.date.startsWith(monthPrefix));
+            if (monthFixed.length === 0) { alert('لا توجد مصاريف ثابتة في هذا الشهر'); return; }
+            const unique = [];
+            const seen = new Set();
+            monthFixed.forEach(r => {
+                const key = r.name + '_' + r.amount;
+                if (!seen.has(key)) { seen.add(key); unique.push({ name: r.name, amount: r.amount }); }
+            });
+            const daysInMonth = new Date(parseInt(monthPrefix.slice(0,4)), parseInt(monthPrefix.slice(5,7)), 0).getDate();
+            let added = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const day = monthPrefix + '-' + String(d).padStart(2, '0');
+                unique.forEach(item => {
+                    const exists = records.some(r => r.kind === 'fixed' && r.date === day && r.name === item.name && r.amount === item.amount);
+                    if (!exists) {
+                        records.push({ date: day, name: item.name, amount: item.amount, kind: 'fixed', id: Date.now() + Math.random() });
+                        added++;
+                    }
+                });
+            }
+            if (added > 0) {
+                saveRecords();
+                alert(`تمت إضافة ${added} مصروف ثابت لجميع أيام الشهر ✅`);
+            } else {
+                alert('كل المصروفات الثابتة مكررة بالفعل لكل أيام الشهر');
+            }
+            render();
+            renderRecordLists();
+        }
+
         function renderRecordLists() {
             const fixedDate = document.getElementById('fixedDate').value || todayStr();
             const varDate = document.getElementById('varDate').value || todayStr();
@@ -379,6 +419,7 @@
                 const li = document.createElement('li');
                 li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
                     <span class="exp-amount">${r.amount}</span>
+                    <button class="edit-btn" onclick="editRecord(${r.id})">تعديل</button>
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 fList.appendChild(li);
             });
@@ -390,6 +431,7 @@
                 const li = document.createElement('li');
                 li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
                     <span class="exp-amount">${r.amount}</span>
+                    <button class="edit-btn" onclick="editRecord(${r.id})">تعديل</button>
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 vList.appendChild(li);
             });
@@ -401,6 +443,24 @@
 
         function delRecord(id) {
             records = records.filter(r => r.id !== id);
+            saveRecords();
+            render();
+            renderRecordLists();
+        }
+
+        function editRecord(id) {
+            const rec = records.find(r => r.id === id);
+            if (!rec) return;
+            const newName = prompt('اسم المصروف:', rec.name);
+            if (newName === null) return;
+            const newAmountStr = prompt('المبلغ:', rec.amount);
+            if (newAmountStr === null) return;
+            const newAmount = parseFloat(newAmountStr);
+            if (!newName.trim() || isNaN(newAmount) || newAmount <= 0) {
+                alert('بيانات غير صحيحة'); return;
+            }
+            rec.name = newName.trim();
+            rec.amount = newAmount;
             saveRecords();
             render();
             renderRecordLists();
@@ -429,12 +489,36 @@
                 document.getElementById('summary').style.background = '#16a085';
             }
 
+            const month = date.slice(0, 7);
+            const monthRecs = records.filter(r => r.date.startsWith(month));
+            const monthCard = document.getElementById('monthlyCard');
+            if (monthRecs.length > 0 || salary > 0) {
+                monthCard.style.display = '';
+                const mFixed = sum(monthRecs.filter(r => r.kind === 'fixed'));
+                const mVar = sum(monthRecs.filter(r => r.kind === 'var'));
+                const mTotal = mFixed + mVar;
+                const mRemaining = salary > 0 ? salary - mTotal : 0;
+                const mDays = [...new Set(monthRecs.map(r => r.date))].length;
+                let mHtml = `الراتب الشهري: <b>${salary}</b> دينار<br>`;
+                mHtml += `الثابت: ${mFixed} | المتغير: ${mVar}<br>`;
+                mHtml += `المجموع الكلي: <b>${mTotal}</b> دينار<br>`;
+                if (salary > 0) {
+                    const color = mRemaining < 0 ? '#e74c3c' : '#27ae60';
+                    mHtml += `الباقي الشهري: <b style="color:${color}">${mRemaining} دينار</b>`;
+                }
+                mHtml += `<br><span style="color:#888;font-size:13px">(${mDays} يوم فيها مصاريف — ${monthRecs.length} مصروف)</span>`;
+                document.getElementById('monthlySummary').innerHTML = mHtml;
+            } else {
+                monthCard.style.display = 'none';
+            }
+
             const fList = document.getElementById('fixedList');
             fList.innerHTML = fixedList.length ? '' : '<li class="empty">لا مصاريف ثابتة في هذا اليوم</li>';
             fixedList.forEach(r => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
                     <span class="exp-amount">${r.amount}</span>
+                    <button class="edit-btn" onclick="editRecord(${r.id})">تعديل</button>
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 fList.appendChild(li);
             });
@@ -446,6 +530,7 @@
                 const li = document.createElement('li');
                 li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
                     <span class="exp-amount">${r.amount}</span>
+                    <button class="edit-btn" onclick="editRecord(${r.id})">تعديل</button>
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 vList.appendChild(li);
             });
