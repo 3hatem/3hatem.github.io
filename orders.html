@@ -96,6 +96,23 @@
         }
         .stats { text-align: center; margin-top: 15px; color: #888; font-size: 14px; }
         .empty { text-align: center; color: #aaa; padding: 20px; }
+        #codeOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+        #codeOverlay .code-box {
+            background: #fff; border-radius: 16px; padding: 24px; width: 85%; max-width: 320px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        #codeOverlay h2 { color: #764ba2; font-size: 20px; margin-bottom: 8px; }
+        #codeOverlay p { color: #888; font-size: 14px; margin-bottom: 14px; }
+        #codeOverlay input {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 18px; text-align: center; outline: none; margin-bottom: 12px;
+        }
+        #codeOverlay input:focus { border-color: #764ba2; }
+        #codeOverlay .err { color: #e74c3c; font-size: 13px; margin-bottom: 8px; display: none; }
+        .badge { font-size: 11px; color: #999; text-align: left; }
         @media (max-width: 480px) {
             .container { padding: 15px; }
             .btn { font-size: 14px; padding: 10px; }
@@ -135,9 +152,72 @@
         <div class="stats" id="stats"></div>
     </div>
 
+    <div id="codeOverlay">
+        <div class="code-box">
+            <h2>🔒 رمز العائلة</h2>
+            <p>ادخل رمز العائلة عشان تفتح القائمة المشتركة</p>
+            <input type="password" id="familyCode" placeholder="مثلاً: 1234" maxlength="20" />
+            <div class="err" id="codeErr">الرمز غير صحيح، حاول مرة ثانية</div>
+            <button class="btn btn-add" style="width:100%" onclick="submitCode()">دخول</button>
+        </div>
+    </div>
+
     <script>
+        const DB_URL = 'https://family-apps-e0076-default-rtdb.asia-southeast1.firebasedatabase.app/';
+        const FAMILY_CODE = '4873';
+
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         let currentFilter = 'all';
+        let syncing = false;
+
+        const overlay = document.getElementById('codeOverlay');
+        const savedCode = localStorage.getItem('famCode');
+        if (savedCode === FAMILY_CODE) {
+            overlay.style.display = 'none';
+        } else {
+            localStorage.removeItem('famCode');
+            overlay.style.display = 'flex';
+        }
+
+        function submitCode() {
+            const input = document.getElementById('familyCode');
+            if (input.value.trim() === FAMILY_CODE) {
+                localStorage.setItem('famCode', FAMILY_CODE);
+                overlay.style.display = 'none';
+                console.log('تم الدخول');
+            } else {
+                document.getElementById('codeErr').style.display = 'block';
+            }
+        }
+
+        document.getElementById('familyCode').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitCode();
+        });
+
+        function pushCloud() {
+            if (syncing) return;
+            fetch(DB_URL + 'tasks.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tasks)
+            }).catch(() => {});
+        }
+
+        function pullCloud() {
+            if (syncing) return;
+            syncing = true;
+            fetch(DB_URL + 'tasks.json')
+                .then(r => r.json())
+                .then(remote => {
+                    if (remote && Array.isArray(remote)) {
+                        tasks = remote;
+                        localStorage.setItem('tasks', JSON.stringify(tasks));
+                        render();
+                    }
+                })
+                .catch(() => {})
+                .finally(() => { syncing = false; });
+        }
 
 const categoryKeywords = {
             'بهارات': ['ملح', 'فلفل أسود', 'فلفل اسود', 'كمون', 'كركم', 'كزبرة', 'قرفة', 'هيل', 'زعفران', 'بهارات', 'ماجي', 'كاري', 'زنجبيل', 'بابريكا', 'شطة', 'حب', 'حب هيل', 'عصفر'],
@@ -191,6 +271,7 @@ const categoryKeywords = {
         function save() {
             localStorage.setItem('tasks', JSON.stringify(tasks));
             render();
+            pushCloud();
         }
 
         function addTask() {
@@ -355,6 +436,8 @@ const categoryKeywords = {
             if (e.key === 'Enter') addTask();
         });
 
+        setInterval(pullCloud, 3000);
+        if (localStorage.getItem('famCode') === FAMILY_CODE) pullCloud();
         render();
     </script>
 </body>

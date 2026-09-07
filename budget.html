@@ -85,6 +85,22 @@
         .history-item { display: flex; justify-content: space-between; padding: 8px 6px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
         .history-item:hover { background: #f0f0f0; }
         .history-item .h-date { font-weight: bold; color: #16a085; }
+        #codeOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+        #codeOverlay .code-box {
+            background: #fff; border-radius: 16px; padding: 24px; width: 85%; max-width: 320px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        #codeOverlay h2 { color: #16a085; font-size: 20px; margin-bottom: 8px; }
+        #codeOverlay p { color: #888; font-size: 14px; margin-bottom: 14px; }
+        #codeOverlay input {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 18px; text-align: center; outline: none; margin-bottom: 12px;
+        }
+        #codeOverlay input:focus { border-color: #16a085; }
+        #codeOverlay .err { color: #e74c3c; font-size: 13px; margin-bottom: 8px; display: none; }
     </style>
 </head>
 <body>
@@ -154,12 +170,82 @@
         </div>
     </div>
 
+    <div id="codeOverlay">
+        <div class="code-box">
+            <h2>🔒 رمز العائلة</h2>
+            <p>ادخل رمز العائلة عشان تفتح الميزانية المشتركة</p>
+            <input type="password" id="familyCode" placeholder="مثلاً: 1234" maxlength="20" />
+            <div class="err" id="codeErr">الرمز غير صحيح، حاول مرة ثانية</div>
+            <button class="btn btn-primary" style="width:100%" onclick="submitCode()">دخول</button>
+        </div>
+    </div>
+
     <script>
+        const DB_URL = 'https://family-apps-e0076-default-rtdb.asia-southeast1.firebasedatabase.app/';
+        const FAMILY_CODE = '4873';
+
         const todayStr = () => new Date().toISOString().slice(0, 10);
         let salary = parseFloat(localStorage.getItem('budget_salary')) || 0;
         let records = JSON.parse(localStorage.getItem('budget_records')) || [];
+        let syncing = false;
 
-        function saveRecords() { localStorage.setItem('budget_records', JSON.stringify(records)); }
+        const overlay = document.getElementById('codeOverlay');
+        const savedCode = localStorage.getItem('famCode');
+        if (savedCode === FAMILY_CODE) {
+            overlay.style.display = 'none';
+        } else {
+            localStorage.removeItem('famCode');
+            overlay.style.display = 'flex';
+        }
+
+        function submitCode() {
+            const input = document.getElementById('familyCode');
+            if (input.value.trim() === FAMILY_CODE) {
+                localStorage.setItem('famCode', FAMILY_CODE);
+                overlay.style.display = 'none';
+            } else {
+                document.getElementById('codeErr').style.display = 'block';
+            }
+        }
+        document.getElementById('familyCode').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitCode();
+        });
+
+        function pushCloud() {
+            if (syncing) return;
+            fetch(DB_URL + 'budget.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ salary: salary, records: records })
+            }).catch(() => {});
+        }
+
+        function pullCloud() {
+            if (syncing) return;
+            syncing = true;
+            fetch(DB_URL + 'budget.json')
+                .then(r => r.json())
+                .then(remote => {
+                    if (remote && typeof remote === 'object') {
+                        if (typeof remote.salary === 'number') {
+                            salary = remote.salary;
+                            localStorage.setItem('budget_salary', salary);
+                        }
+                        if (Array.isArray(remote.records)) {
+                            records = remote.records;
+                            localStorage.setItem('budget_records', JSON.stringify(records));
+                        }
+                        render();
+                    }
+                })
+                .catch(() => {})
+                .finally(() => { syncing = false; });
+        }
+
+        function saveRecords() {
+            localStorage.setItem('budget_records', JSON.stringify(records));
+            pushCloud();
+        }
 
         function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -173,6 +259,7 @@
                 salary = val;
                 localStorage.setItem('budget_salary', val);
                 document.getElementById('salarySaved').textContent = `الراتب المحفوظ: ${salary} ريال`;
+                pushCloud();
             }
         }
 
@@ -272,6 +359,8 @@
         document.getElementById('viewDate').value = todayStr();
         document.getElementById('expDate').value = todayStr();
         document.getElementById('salarySaved').textContent = salary > 0 ? `الراتب المحفوظ: ${salary} ريال` : '';
+        pullCloud();
+        setInterval(() => { if (localStorage.getItem('famCode') === FAMILY_CODE) pullCloud(); }, 3000);
         render();
     </script>
 </body>
