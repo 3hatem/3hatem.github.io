@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -30,24 +30,24 @@
         h1 { text-align: center; color: #764ba2; margin-bottom: 20px; font-size: 24px; }
         .input-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; flex-wrap: nowrap; }
         .input-row input[type="text"] {
-            flex: 1; min-width: 0; padding: 9px 10px; border: 2px solid #e0e0e0;
+            flex: 1; min-width: 0; padding: 15px 10px; border: 2px solid #e0e0e0;
             border-radius: 8px; font-size: 15px; outline: none;
         }
         .input-row input:focus { border-color: #764ba2; }
         .qty-input {
-            width: 52px; padding: 9px 4px; border: 2px solid #e0e0e0;
+            width: 52px; padding: 15px 4px; border: 2px solid #e0e0e0;
             border-radius: 8px; font-size: 14px; text-align: center; outline: none;
         }
         .qty-input:focus { border-color: #764ba2; }
         .unit-btns { display: flex; gap: 4px; }
         .unit-btn {
-            padding: 9px 8px; border: 2px solid #e0e0e0; border-radius: 8px;
+            padding: 15px 8px; border: 2px solid #e0e0e0; border-radius: 8px;
             font-size: 13px; background: #fff; color: #555; cursor: pointer; font-weight: bold;
             white-space: nowrap;
         }
         .unit-btn.active { background: #764ba2; border-color: #764ba2; color: #fff; }
         .btn {
-            padding: 10px 14px; border: none; border-radius: 8px;
+            padding: 15px 14px; border: none; border-radius: 8px;
             cursor: pointer; font-size: 15px; color: #fff; transition: 0.2s;
         }
         .btn-add { background: #764ba2; white-space: nowrap; font-weight: bold; }
@@ -134,14 +134,11 @@
             <button class="btn btn-add" onclick="addTask()">إضافة</button>
         </div>
         <div class="action-row">
-            <button class="btn-action btn-copy" onclick="copyList()">📋 نسخ القائمة</button>
-            <button class="btn-action btn-import" onclick="importList()">📥 استيراد قائمة</button>
-            <button class="btn-action btn-clear" onclick="clearDone()">🗑️ مسح المكتملة</button>
+            <button class="btn-action btn-clear" onclick="clearDone()">🗑️ مسح السلة</button>
         </div>
         <div class="filters">
-            <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">الكل</button>
-            <button class="filter-btn" data-filter="active" onclick="setFilter('active')">الناقصة</button>
-            <button class="filter-btn" data-filter="done" onclick="setFilter('done')">المكتملة</button>
+            <button class="filter-btn active" data-filter="active" onclick="setFilter('active')">اختيار</button>
+            <button class="filter-btn" data-filter="done" onclick="setFilter('done')">السلة</button>
         </div>
         <div id="taskList"></div>
         <div class="stats" id="stats"></div>
@@ -163,7 +160,7 @@
         const DB_URL = 'https://family-apps-e0076-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        let currentFilter = 'all';
+        let currentFilter = 'active';
         let syncing = false;
         let selectedUnit = 'عدد';
 
@@ -400,71 +397,6 @@ const categoryKeywords = {
             if (confirm(`هل أنت متأكد من مسح ${done} مكتملة؟`)) {
                 tasks = tasks.filter(t => !t.done);
                 save();
-            }
-        }
-
-        function copyList() {
-            if (tasks.length === 0) { alert('القائمة فارغة'); return; }
-            const lines = tasks.map(t => {
-                const qtyPart = t.qty != null ? ` (${t.qty} ${t.unit || ''})` : '';
-                return `${t.text}${qtyPart}`;
-            });
-            const text = 'قائمة المهام:\n' + lines.join('\n');
-            navigator.clipboard.writeText(text).then(() => {
-                alert('تم نسخ القائمة!\nألصقها في واتساب أو الرسائل.');
-            }).catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = text;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                alert('تم نسخ القائمة!');
-            });
-        }
-
-        function importList() {
-            const parseAndAdd = (raw) => {
-                let added = 0;
-                raw.split(/\r?\n/).forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-                    line = line.replace(/^[-*•✅⬜]\s*/, '');
-                    let qty = null, unit = '', text = line;
-                    const m = line.match(/^(.*?)\s*\(([\d.]+)\s*(.*?)\)\s*$/);
-                    if (m) {
-                        text = m[1].trim();
-                        qty = parseFloat(m[2]);
-                        unit = m[3].trim();
-                    }
-                    if (!text) return;
-                    const category = categorize(text);
-                    tasks.push({ id: Date.now() + Math.random(), text, done: false, category, qty, unit });
-                    added++;
-                });
-                return added;
-            };
-
-            const fallback = () => {
-                const val = prompt('الصق القائمة النصية هنا (كل مهمة في سطر):');
-                if (!val) return;
-                const added = parseAndAdd(val);
-                if (added > 0) { save(); alert(`تم استيراد ${added} مهمة`); }
-                else { alert('ما حصلنا على أي مهمة صالحة'); }
-            };
-
-            if (navigator.clipboard && navigator.clipboard.readText) {
-                navigator.clipboard.readText().then(val => {
-                    if (val && val.trim()) {
-                        const added = parseAndAdd(val);
-                        if (added > 0) { save(); alert(`تم استيراد ${added} مهمة من الحافظة`); }
-                        else fallback();
-                    } else {
-                        fallback();
-                    }
-                }).catch(() => fallback());
-            } else {
-                fallback();
             }
         }
 
