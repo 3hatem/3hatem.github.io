@@ -108,7 +108,7 @@
         #codeOverlay p { color: #888; font-size: 14px; margin-bottom: 14px; }
         #codeOverlay input {
             width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;
-            font-size: 18px; text-align: center; outline: none; margin-bottom: 12px;
+            font-size: 18px; text-align: center; outline: none; margin-bottom: 12px; box-sizing: border-box;
         }
         #codeOverlay input:focus { border-color: #764ba2; }
         #codeOverlay .err { color: #e74c3c; font-size: 13px; margin-bottom: 8px; display: none; }
@@ -154,69 +154,111 @@
 
     <div id="codeOverlay">
         <div class="code-box">
-            <h2>🔒 رمز العائلة</h2>
-            <p>ادخل رمز العائلة عشان تفتح القائمة المشتركة</p>
-            <input type="password" id="familyCode" placeholder="مثلاً: 1234" maxlength="20" />
-            <div class="err" id="codeErr">الرمز غير صحيح، حاول مرة ثانية</div>
+            <h2>🔒 دخول العائلة</h2>
+            <p>سجّل بحساب العائلة عشان تفتح القائمة المشتركة</p>
+            <input type="email" id="famEmail" placeholder="البريد الإلكتروني" value="family@lathem.com" />
+            <input type="password" id="famPass" placeholder="كلمة المرور" />
+            <div class="err" id="codeErr">البريد أو كلمة المرور غير صحيحة</div>
             <button class="btn btn-add" style="width:100%" onclick="submitCode()">دخول</button>
         </div>
     </div>
 
     <script>
+        const FB_API_KEY = 'AIzaSyBNQfKafqgRqmIfPPvXCDMc0V1tJ2w_RgE';
         const DB_URL = 'https://family-apps-e0076-default-rtdb.asia-southeast1.firebasedatabase.app/';
-        const FAMILY_CODE = 'Ramez333';
+        const FAMILY_EMAIL = 'family@lathem.com';
 
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         let currentFilter = 'all';
         let syncing = false;
 
         const overlay = document.getElementById('codeOverlay');
-        const savedCode = localStorage.getItem('famCode');
-        if (savedCode === FAMILY_CODE) {
-            overlay.style.display = 'none';
-        } else {
-            localStorage.removeItem('famCode');
+
+        function getToken() {
+            return new Promise((resolve, reject) => {
+                const auth = JSON.parse(localStorage.getItem('famAuth') || 'null');
+                if (!auth || !auth.refreshToken) { reject('noauth'); return; }
+                if (auth.expiresAt && Date.now() < auth.expiresAt) { resolve(auth.idToken); return; }
+                fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: auth.refreshToken })
+                }).then(r => r.json()).then(d => {
+                    if (d.id_token) {
+                        const updated = {
+                            refreshToken: d.refresh_token || auth.refreshToken,
+                            idToken: d.id_token,
+                            expiresAt: Date.now() + parseInt(d.expires_in || 3600) * 1000 - 60000
+                        };
+                        localStorage.setItem('famAuth', JSON.stringify(updated));
+                        resolve(d.id_token);
+                    } else { reject('refreshfail'); }
+                }).catch(() => reject('refreshfail'));
+            });
+        }
+
+        function showLogin() {
             overlay.style.display = 'flex';
         }
 
         function submitCode() {
-            const input = document.getElementById('familyCode');
-            if (input.value.trim() === FAMILY_CODE) {
-                localStorage.setItem('famCode', FAMILY_CODE);
-                overlay.style.display = 'none';
-                console.log('تم الدخول');
-            } else {
+            const email = document.getElementById('famEmail').value.trim();
+            const pass = document.getElementById('famPass').value;
+            fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FB_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+            }).then(r => r.json()).then(d => {
+                if (d.idToken) {
+                    localStorage.setItem('famAuth', JSON.stringify({
+                        refreshToken: d.refreshToken,
+                        idToken: d.idToken,
+                        expiresAt: Date.now() + parseInt(d.expiresIn || 3600) * 1000 - 60000
+                    }));
+                    overlay.style.display = 'none';
+                    pullCloud();
+                } else {
+                    document.getElementById('codeErr').style.display = 'block';
+                }
+            }).catch(() => {
                 document.getElementById('codeErr').style.display = 'block';
-            }
+            });
         }
 
-        document.getElementById('familyCode').addEventListener('keypress', (e) => {
+        document.getElementById('famPass').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') submitCode();
         });
 
         function pushCloud() {
             if (syncing) return;
-            fetch(DB_URL + 'tasks.json', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(tasks)
-            }).catch(() => {});
+            getToken().then(t => {
+                fetch(DB_URL + 'tasks.json?auth=' + encodeURIComponent(t), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tasks)
+                }).then(r => { if (r.status === 401) showLogin(); });
+            }).catch(() => showLogin());
         }
 
         function pullCloud() {
             if (syncing) return;
             syncing = true;
-            fetch(DB_URL + 'tasks.json')
-                .then(r => r.json())
-                .then(remote => {
-                    if (remote && Array.isArray(remote)) {
-                        tasks = remote;
-                        localStorage.setItem('tasks', JSON.stringify(tasks));
-                        render();
-                    }
-                })
-                .catch(() => {})
-                .finally(() => { syncing = false; });
+            getToken().then(t => {
+                fetch(DB_URL + 'tasks.json?auth=' + encodeURIComponent(t))
+                    .then(r => {
+                        if (r.status === 401) { showLogin(); return null; }
+                        return r.json();
+                    })
+                    .then(remote => {
+                        if (remote && Array.isArray(remote)) {
+                            tasks = remote;
+                            localStorage.setItem('tasks', JSON.stringify(tasks));
+                            render();
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(() => { syncing = false; });
+            }).catch(() => { syncing = false; showLogin(); });
         }
 
 const categoryKeywords = {
@@ -437,7 +479,9 @@ const categoryKeywords = {
         });
 
         setInterval(pullCloud, 3000);
-        if (localStorage.getItem('famCode') === FAMILY_CODE) pullCloud();
+        const auth = JSON.parse(localStorage.getItem('famAuth') || 'null');
+        if (auth && auth.refreshToken) { pullCloud(); }
+        else { showLogin(); }
         render();
     </script>
 </body>
