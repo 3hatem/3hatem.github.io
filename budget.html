@@ -324,7 +324,7 @@
             if (!isNaN(val)) {
                 salary = val;
                 localStorage.setItem('budget_salary', val);
-                document.getElementById('salarySaved').textContent = `الراتب المحفوظ: ${salary} ريال`;
+                document.getElementById('salarySaved').textContent = `الراتب المحفوظ: ${salary} دينار`;
                 pushCloud();
             }
         }
@@ -380,7 +380,7 @@
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 fList.appendChild(li);
             });
-            document.getElementById('fixedTotal').textContent = fixedList.length ? `المجموع: ${fixedSum} ريال` : '';
+            document.getElementById('fixedTotal').textContent = fixedList.length ? `المجموع: ${fixedSum} دينار` : '';
 
             const vList = document.getElementById('varList');
             vList.innerHTML = varList.length ? '' : '<li class="empty">لا مصاريف متغيرة في هذا اليوم</li>';
@@ -391,7 +391,7 @@
                     <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
                 vList.appendChild(li);
             });
-            document.getElementById('varTotal').textContent = varList.length ? `المجموع: ${varSum} ريال` : '';
+            document.getElementById('varTotal').textContent = varList.length ? `المجموع: ${varSum} دينار` : '';
 
             const hList = document.getElementById('historyList');
             const dates = [...new Set(records.map(r => r.date))].sort().reverse();
@@ -401,7 +401,7 @@
                 const total = sum(records.filter(r => r.date === d));
                 const div = document.createElement('div');
                 div.className = 'history-item';
-                div.innerHTML = `<span class="h-date">${d}</span><span>${total} ريال</span>`;
+                div.innerHTML = `<span class="h-date">${d}</span><span>${total} دينار</span>`;
                 div.onclick = () => { document.getElementById('viewDate').value = d; render(); };
                 hList.appendChild(div);
             });
