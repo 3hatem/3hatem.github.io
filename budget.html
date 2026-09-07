@@ -146,6 +146,20 @@
                 <div class="count" id="salarySaved"></div>
             </div>
 
+            <div class="card">
+                <h2>👥 الجمعية</h2>
+                <div class="form-row">
+                    <label>المبلغ الشهري:</label>
+                    <input type="number" id="gemeaAmount" placeholder="مثلاً 100" min="0" />
+                </div>
+                <div class="form-row">
+                    <label>تاريخ النهاية:</label>
+                    <input type="month" id="gemeaEnd" />
+                </div>
+                <button class="btn btn-warning btn-small" onclick="setGemea()">حفظ الجمعية</button>
+                <div class="count" id="gemeaInfo"></div>
+            </div>
+
             <div class="section section-fixed">
                 <div class="section-head">
                     <span>⬇️ مصروف ثابت</span>
@@ -158,7 +172,7 @@
                     </div>
                     <button class="btn btn-primary btn-small" onclick="addExpense('fixed')" style="width:100%">إضافة ثابت</button>
                     <div class="count" id="recFixedTotal"></div>
-                    <button class="btn btn-primary btn-small" onclick="repeatFixed()" style="width:100%;margin-top:8px;background:#16a085">🔄 تكرار لكل أيام الشهر</button>
+                    <button class="btn btn-primary btn-small" onclick="repeatNextMonth()" style="width:100%;margin-top:8px;background:#16a085">📅 تكرار للشهر القادم فقط (نفس التاريخ)</button>
                 </div>
                 <ul id="recFixedList"></ul>
             </div>
@@ -303,7 +317,7 @@
                 fetch(DB_URL + 'budget.json?auth=' + encodeURIComponent(t), {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ salary: salary, records: records })
+                    body: JSON.stringify({ salary: salary, records: records, gemea: gemea })
                 }).then(r => { if (r.status === 401) showLogin(); });
             }).catch(() => showLogin());
         }
@@ -327,6 +341,11 @@
                                 records = remote.records;
                                 localStorage.setItem('budget_records', JSON.stringify(records));
                             }
+                            if (remote.gemea && typeof remote.gemea === 'object') {
+                                gemea = remote.gemea;
+                                localStorage.setItem('budget_gemea', JSON.stringify(gemea));
+                            }
+                            renderGemea();
                             render();
                         }
                     })
@@ -356,6 +375,46 @@
             }
         }
 
+        let gemea = JSON.parse(localStorage.getItem('budget_gemea') || 'null');
+
+        function setGemea() {
+            const amount = parseFloat(document.getElementById('gemeaAmount').value);
+            const end = document.getElementById('gemeaEnd').value;
+            if (isNaN(amount) || amount <= 0 || !end) { alert('اكتب المبلغ واختر تاريخ النهاية'); return; }
+            gemea = { amount, end };
+            localStorage.setItem('budget_gemea', JSON.stringify(gemea));
+            pushCloud();
+            renderGemea();
+            alert('تم حفظ الجمعية ✅');
+        }
+
+        function renderGemea() {
+            document.getElementById('gemeaAmount').value = gemea ? gemea.amount : '';
+            document.getElementById('gemeaEnd').value = gemea ? gemea.end : '';
+            const info = document.getElementById('gemeaInfo');
+            if (!gemea) { info.textContent = ''; return; }
+            const now = new Date();
+            const [ey, em] = gemea.end.split('-').map(Number);
+            const endTotal = ey * 12 + (em - 1);
+            const curTotal = now.getFullYear() * 12 + now.getMonth();
+            const remain = endTotal - curTotal;
+            if (remain < 0) {
+                info.textContent = `انتهت الجمعية ✅ (${gemea.amount} دينار شهرياً)`;
+                info.style.color = '#27ae60';
+                return;
+            }
+            const years = Math.floor(remain / 12);
+            const months = remain % 12;
+            let txt = `مجموع المتبقي للجمعية: ${gemea.amount} دينار شهرياً`;
+            if (years > 0) {
+                txt += ` — متبقٍ ${years} سنة و ${months} شهر`;
+            } else {
+                txt += ` — متبقٍ ${months} شهر`;
+            }
+            info.textContent = txt;
+            info.style.color = '#16a085';
+        }
+
         function addExpense(kind) {
             const dateId = kind === 'fixed' ? 'fixedDate' : 'varDate';
             const nameId = kind === 'fixed' ? 'fixedName' : 'varName';
@@ -374,7 +433,7 @@
             renderRecordLists();
         }
 
-        function repeatFixed() {
+        function repeatNextMonth() {
             const month = document.getElementById('fixedDate').value || todayStr();
             const monthPrefix = month.slice(0, 7);
             const monthFixed = records.filter(r => r.kind === 'fixed' && r.date.startsWith(monthPrefix));
@@ -385,23 +444,25 @@
                 const key = r.name + '_' + r.amount;
                 if (!seen.has(key)) { seen.add(key); unique.push({ name: r.name, amount: r.amount }); }
             });
-            const daysInMonth = new Date(parseInt(monthPrefix.slice(0,4)), parseInt(monthPrefix.slice(5,7)), 0).getDate();
+            const [y, m] = monthPrefix.split('-').map(Number);
+            const nextMonth = m === 12 ? 1 : m + 1;
+            const nextYear = m === 12 ? y + 1 : y;
+            const nextPrefix = nextYear + '-' + String(nextMonth).padStart(2, '0');
+            const sameDay = Math.min(parseInt(month.slice(8, 10)) || 1, new Date(nextYear, nextMonth, 0).getDate());
+            const day = nextPrefix + '-' + String(sameDay).padStart(2, '0');
             let added = 0;
-            for (let d = 1; d <= daysInMonth; d++) {
-                const day = monthPrefix + '-' + String(d).padStart(2, '0');
-                unique.forEach(item => {
-                    const exists = records.some(r => r.kind === 'fixed' && r.date === day && r.name === item.name && r.amount === item.amount);
-                    if (!exists) {
-                        records.push({ date: day, name: item.name, amount: item.amount, kind: 'fixed', id: Date.now() + Math.random() });
-                        added++;
-                    }
-                });
-            }
+            unique.forEach(item => {
+                const exists = records.some(r => r.kind === 'fixed' && r.date === day && r.name === item.name && r.amount === item.amount);
+                if (!exists) {
+                    records.push({ date: day, name: item.name, amount: item.amount, kind: 'fixed', id: Date.now() + Math.random() });
+                    added++;
+                }
+            });
             if (added > 0) {
                 saveRecords();
-                alert(`تمت إضافة ${added} مصروف ثابت لجميع أيام الشهر ✅`);
+                alert(`تم تكرار ${added} مصروف ثابت للشهر القادم (${day}) بنفس التاريخ ✅`);
             } else {
-                alert('كل المصروفات الثابتة مكررة بالفعل لكل أيام الشهر');
+                alert('كل المصروفات الثابتة مكررة بالفعل في الشهر القادم');
             }
             render();
             renderRecordLists();
@@ -570,6 +631,7 @@
         document.getElementById('varDate').value = todayStr();
         render();
         renderRecordLists();
+        renderGemea();
         const auth = JSON.parse(localStorage.getItem('famAuth') || 'null');
         if (auth && auth.refreshToken) { overlay.style.display = 'none'; pullCloud(); }
         else { showLogin(); }
