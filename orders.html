@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفضل يا بوحمد، القائمة جاهزة</title>
+    <meta name="theme-color" content="#764ba2">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            background: #fff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            align-self: flex-start;
+        }
+        h1 { text-align: center; color: #764ba2; margin-bottom: 20px; font-size: 24px; }
+        .input-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-row input[type="text"] {
+            flex: 1; min-width: 140px; padding: 12px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 16px; outline: none;
+        }
+        .input-row input:focus { border-color: #764ba2; }
+        .qty-control { display: flex; gap: 6px; align-items: center; }
+        .qty-input {
+            width: 60px; padding: 11px 6px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 15px; text-align: center; outline: none;
+        }
+        .qty-input:focus { border-color: #764ba2; }
+        .qty-unit {
+            padding: 10px 8px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; background: #fff; color: #555; outline: none;
+        }
+        .btn {
+            padding: 12px 16px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 16px; color: #fff; transition: 0.2s;
+        }
+        .btn-add { background: #764ba2; }
+        .btn-add:hover { background: #667eea; }
+        .action-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .btn-action {
+            flex: 1; min-width: 130px; padding: 9px 6px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 13px; font-weight: bold;
+        }
+        .btn-clear { background: #e74c3c; color: #fff; }
+        .btn-clear:hover { background: #c0392b; }
+        .btn-copy { background: #764ba2; color: #fff; }
+        .btn-copy:hover { background: #667eea; }
+        .btn-import { background: #27ae60; color: #fff; }
+        .btn-import:hover { background: #1e8449; }
+        .filters { display: flex; gap: 8px; margin-bottom: 15px; }
+        .filter-btn {
+            flex: 1; padding: 8px; border: none; border-radius: 8px;
+            cursor: pointer; background: #f0f0f0; color: #555; font-size: 14px;
+        }
+        .filter-btn.active { background: #764ba2; color: #fff; }
+        .group-title {
+            display: flex; align-items: center; gap: 8px;
+            margin: 14px 0 6px; font-size: 14px; font-weight: bold; color: #fff;
+            padding: 7px 12px; border-radius: 8px;
+        }
+        ul { list-style: none; }
+        li {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 16px;
+        }
+        li:last-child { border-bottom: none; }
+        li input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; }
+        li .task-text { flex: 1; word-break: break-word; }
+        .qty-badge {
+            background: #f0f0f0; color: #555; border-radius: 12px;
+            padding: 3px 10px; font-size: 13px; white-space: nowrap;
+        }
+        li.done .task-text { text-decoration: line-through; color: #999; }
+        .delete-btn {
+            background: #e74c3c; border: none; color: #fff;
+            border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; flex-shrink: 0;
+        }
+        .delete-btn:hover { background: #c0392b; }
+        .category-tag {
+            padding: 3px 8px; border-radius: 12px; color: #fff;
+            font-size: 11px; white-space: nowrap; flex-shrink: 0;
+        }
+        .stats { text-align: center; margin-top: 15px; color: #888; font-size: 14px; }
+        .empty { text-align: center; color: #aaa; padding: 20px; }
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            .btn { font-size: 14px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>تفضل يا بوحمد، القائمة جاهزة</h1>
+        <div class="input-row">
+            <input type="text" id="taskInput" placeholder="اكتب مهمة جديدة..." />
+            <div class="qty-control">
+                <input type="number" id="qtyInput" class="qty-input" placeholder="كمية" min="0" step="any" />
+                <select id="qtyUnit" class="qty-unit">
+                    <option value="">بدون</option>
+                    <option value="عدد">عدد</option>
+                    <option value="كيلو">كيلو</option>
+                    <option value="جرام">جرام</option>
+                    <option value="لتر">لتر</option>
+                    <option value="حبة">حبة</option>
+                    <option value="عبوة">عبوة</option>
+                </select>
+            </div>
+            <button class="btn btn-add" onclick="addTask()">إضافة</button>
+        </div>
+        <div class="action-row">
+            <button class="btn-action btn-copy" onclick="copyList()">📋 نسخ القائمة</button>
+            <button class="btn-action btn-import" onclick="importList()">📥 استيراد قائمة</button>
+            <button class="btn-action btn-clear" onclick="clearDone()">🗑️ مسح المكتملة</button>
+        </div>
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">الكل</button>
+            <button class="filter-btn" data-filter="active" onclick="setFilter('active')">الناقصة</button>
+            <button class="filter-btn" data-filter="done" onclick="setFilter('done')">المكتملة</button>
+        </div>
+        <div id="taskList"></div>
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let currentFilter = 'all';
+
+const categoryKeywords = {
+            'بهارات': ['ملح', 'فلفل أسود', 'فلفل اسود', 'كمون', 'كركم', 'كزبرة', 'قرفة', 'هيل', 'زعفران', 'بهارات', 'ماجي', 'كاري', 'زنجبيل', 'بابريكا', 'شطة', 'حب', 'حب هيل', 'عصفر'],
+            'فواكه وخضروات': ['طماطم', 'برتقال', 'تفاح', 'موز', 'عنب', 'فراولة', 'بطيخ', 'خوخ', 'تمر', 'ليمون', 'مانجو', 'رمان', 'بصل', 'خيار', 'باذنجان', 'جزر', 'بطاطس', 'كوسة', 'فلفل', 'خس', 'سبانخ', 'ملفوف', 'ثوم', 'زنجبيل'],
+            'مثلجات': ['نكت', 'مثلج', 'أيس كريم', 'بوظة', 'آيسكريم', 'الايس'],
+            'ألبان': ['حليب', 'جبن', 'زبادي', 'لبن', 'روب', 'زبد', 'زبدة', 'كريمة'],
+            'مخبوزات': ['خبز', 'توست', 'كعك', 'بسكويت', 'كرواسون', 'فطيرة', 'بيتزا', 'كيك'],
+            'لحوم': ['لحم', 'دجاج', 'كبسة', 'ستيك', 'برجر', 'سمك', 'روبيان', 'تونة'],
+            'مشروبات': ['ماء', 'عصير', 'شاي', 'قهوة', 'كولا', 'بيبسي', 'شعير', 'سفن', 'ميرندا', 'حليب', 'موية', 'مياه', 'ميلك', 'كوكتيل', 'سبرايت', 'بوب', 'ريد بول', 'سبا', 'هوت', 'نسكافيه', 'انستا', 'مشروب'],
+            'منظفات': ['صابون', 'شامبو', 'مسحوق', 'كلور', 'ديتول', 'معطر'],
+            'أساسيات': ['رز', 'سكر', 'زيت', 'دقيق', 'معكرونة', 'شعيرية', 'عدس', 'حمص']
+        };
+
+        function categorize(text) {
+            const normalized = normalizeArabic(text);
+            let bestCategory = 'عام';
+            let maxScore = 0;
+            for (const [category, keywords] of Object.entries(categoryKeywords)) {
+                let score = 0;
+                keywords.forEach(kw => {
+                    if (normalized.includes(normalizeArabic(kw))) score++;
+                });
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestCategory = category;
+                }
+            }
+            return bestCategory;
+        }
+
+        function normalizeArabic(s) {
+            return s.toLowerCase()
+                .replace(/[\u064B-\u0652\u0640]/g, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ى/g, 'ي');
+        }
+
+        const categoryColors = {
+            'فواكه وخضروات': '#27ae60',
+            'مثلجات': '#3498db',
+            'ألبان': '#f39c12',
+            'مخبوزات': '#8e44ad',
+            'لحوم': '#c0392b',
+            'مشروبات': '#2980b9',
+            'منظفات': '#16a085',
+            'بهارات': '#e67e22',
+            'أساسيات': '#7f8c8d',
+            'عام': '#555'
+        };
+
+        function save() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            render();
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const text = input.value.trim();
+            if (text) {
+                const category = categorize(text);
+                const qty = parseFloat(document.getElementById('qtyInput').value);
+                const unit = document.getElementById('qtyUnit').value;
+                tasks.push({ id: Date.now(), text: text, done: false, category: category, qty: isNaN(qty) ? null : qty, unit: unit });
+                input.value = '';
+                document.getElementById('qtyInput').value = '';
+                save();
+            }
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) { task.done = !task.done; save(); }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.filter === filter);
+            });
+            render();
+        }
+
+        function render() {
+            const list = document.getElementById('taskList');
+            let filtered = tasks;
+            if (currentFilter === 'active') filtered = tasks.filter(t => !t.done);
+            if (currentFilter === 'done') filtered = tasks.filter(t => t.done);
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<li class="empty">لا توجد مهام هنا</li>';
+            } else {
+                list.innerHTML = '';
+                const groups = {};
+                filtered.forEach(t => {
+                    if (!groups[t.category]) groups[t.category] = [];
+                    groups[t.category].push(t);
+                });
+                Object.entries(groups).forEach(([category, items]) => {
+                    const color = categoryColors[category] || '#555';
+                    const title = document.createElement('div');
+                    title.className = 'group-title';
+                    title.style.background = color;
+                    title.textContent = `${category} (${items.length})`;
+                    list.appendChild(title);
+                    items.forEach(t => {
+                        const li = document.createElement('li');
+                        li.className = t.done ? 'done' : '';
+                        const qtyBadge = (t.qty != null)
+                            ? `<span class="qty-badge">${t.qty} ${t.unit || ''}</span>`
+                            : '';
+                        li.innerHTML = `
+                            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})" />
+                            <span class="task-text">${escapeHtml(t.text)}</span>
+                            ${qtyBadge}
+                            <span class="category-tag" style="background:${color}">${escapeHtml(t.category)}</span>
+                            <button class="delete-btn" onclick="deleteTask(${t.id})">حذف</button>
+                        `;
+                        list.appendChild(li);
+                    });
+                });
+            }
+
+            const done = tasks.filter(t => t.done).length;
+            document.getElementById('stats').textContent =
+                `${tasks.length} مهمة | ${done} مكتملة | ${tasks.length - done} ناقصة`;
+        }
+
+        function clearDone() {
+            if (tasks.length === 0) { alert('لا توجد مهام لمسحها'); return; }
+            const done = tasks.filter(t => t.done).length;
+            if (done === 0) { alert('لا توجد مهام مكتملة لمسحها'); return; }
+            if (confirm(`هل أنت متأكد من مسح ${done} مكتملة؟`)) {
+                tasks = tasks.filter(t => !t.done);
+                save();
+            }
+        }
+
+        function copyList() {
+            if (tasks.length === 0) { alert('القائمة فارغة'); return; }
+            const lines = tasks.map(t => {
+                const qtyPart = t.qty != null ? ` (${t.qty} ${t.unit || ''})` : '';
+                return `${t.text}${qtyPart}`;
+            });
+            const text = 'قائمة المهام:\n' + lines.join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                alert('تم نسخ القائمة!\nألصقها في واتساب أو الرسائل.');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                alert('تم نسخ القائمة!');
+            });
+        }
+
+        function importList() {
+            const parseAndAdd = (raw) => {
+                let added = 0;
+                raw.split(/\r?\n/).forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+                    line = line.replace(/^[-*•✅⬜]\s*/, '');
+                    let qty = null, unit = '', text = line;
+                    const m = line.match(/^(.*?)\s*\(([\d.]+)\s*(.*?)\)\s*$/);
+                    if (m) {
+                        text = m[1].trim();
+                        qty = parseFloat(m[2]);
+                        unit = m[3].trim();
+                    }
+                    if (!text) return;
+                    const category = categorize(text);
+                    tasks.push({ id: Date.now() + Math.random(), text, done: false, category, qty, unit });
+                    added++;
+                });
+                return added;
+            };
+
+            const fallback = () => {
+                const val = prompt('الصق القائمة النصية هنا (كل مهمة في سطر):');
+                if (!val) return;
+                const added = parseAndAdd(val);
+                if (added > 0) { save(); alert(`تم استيراد ${added} مهمة`); }
+                else { alert('ما حصلنا على أي مهمة صالحة'); }
+            };
+
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(val => {
+                    if (val && val.trim()) {
+                        const added = parseAndAdd(val);
+                        if (added > 0) { save(); alert(`تم استيراد ${added} مهمة من الحافظة`); }
+                        else fallback();
+                    } else {
+                        fallback();
+                    }
+                }).catch(() => fallback());
+            } else {
+                fallback();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('taskInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ميزانية البيت - سجل المصاريف</title>
+    <meta name="theme-color" content="#16a085">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            background: #fff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            align-self: flex-start;
+        }
+        h1 { text-align: center; color: #16a085; margin-bottom: 16px; font-size: 21px; }
+        .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .tab {
+            flex: 1; padding: 10px; border: none; border-radius: 10px;
+            cursor: pointer; font-size: 14px; font-weight: bold;
+            background: #f0f0f0; color: #666;
+        }
+        .tab.active { background: #16a085; color: #fff; }
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .card h2 { font-size: 15px; color: #444; margin-bottom: 10px; }
+        .form-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+        .form-row label { font-size: 14px; min-width: 70px; color: #555; }
+        input[type="number"], input[type="text"], input[type="date"] {
+            flex: 1; min-width: 90px; padding: 10px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 15px; outline: none;
+        }
+        input:focus { border-color: #16a085; }
+        .btn {
+            padding: 10px 16px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 15px; color: #fff; transition: 0.2s;
+        }
+        .btn-primary { background: #16a085; }
+        .btn-primary:hover { background: #11998e; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-small { padding: 6px 12px; font-size: 13px; }
+        .exp-input-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+        .exp-input-row input { flex: 1; min-width: 80px; }
+        .summary {
+            text-align: center; font-size: 15px; font-weight: bold; padding: 14px;
+            border-radius: 10px; margin-bottom: 14px; color: #fff; line-height: 1.8;
+        }
+        .summary .big { font-size: 24px; display: block; }
+        .nav-date { display: flex; gap: 6px; margin-bottom: 12px; }
+        .nav-date button {
+            padding: 8px 12px; border: none; border-radius: 8px; background: #16a085;
+            color: #fff; font-size: 15px; cursor: pointer;
+        }
+        .nav-date input { flex: 1; }
+        ul { list-style: none; }
+        li { display: flex; align-items: center; gap: 8px; padding: 9px 6px; border-bottom: 1px solid #f0f0f0; font-size: 15px; }
+        li:last-child { border-bottom: none; }
+        li .exp-name { flex: 1; word-break: break-word; }
+        li .exp-amount { font-weight: bold; color: #16a085; white-space: nowrap; }
+        li.done .exp-name { text-decoration: line-through; color: #999; }
+        .del-btn { background: #e74c3c; border: none; color: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+        .count { color: #888; font-size: 13px; text-align: center; margin-top: 6px; }
+        .empty { color: #aaa; text-align: center; padding: 14px; }
+        .history { max-height: 260px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; padding: 8px 6px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .history-item:hover { background: #f0f0f0; }
+        .history-item .h-date { font-weight: bold; color: #16a085; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 ميزانية البيت</h1>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="record" onclick="switchTab('record')">📝 تسجيل</button>
+            <button class="tab" data-tab="view" onclick="switchTab('view')">🔍 استعراض</button>
+        </div>
+
+        <!-- تسجيل -->
+        <div id="recordTab">
+            <div class="card">
+                <h2>💵 الراتب الشهري</h2>
+                <div class="form-row">
+                    <label>الراتب:</label>
+                    <input type="number" id="salaryInput" placeholder="مثلاً 800" min="0" />
+                </div>
+                <button class="btn btn-primary btn-small" onclick="setSalary()">حفظ الراتب</button>
+                <div class="count" id="salarySaved"></div>
+            </div>
+
+            <div class="card">
+                <h2>➕ إضافة مصروف</h2>
+                <div class="exp-input-row">
+                    <input type="date" id="expDate" />
+                    <input type="text" id="expName" placeholder="الاسم (نت، سوق، بنزين...)" />
+                    <input type="number" id="expAmount" placeholder="المبلغ" min="0" />
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="btn btn-primary btn-small" onclick="addExpense('fixed')">⬅️ ثابت</button>
+                    <button class="btn btn-primary btn-small" onclick="addExpense('var')">📝 متغير</button>
+                </div>
+                <div class="count">الثابت: نت/ايبال/فواتير الدائمة 🌐 | المتغير: بنزين/سوق/سواها 🛒</div>
+            </div>
+        </div>
+
+        <!-- استعراض -->
+        <div id="viewTab" style="display:none">
+            <div class="nav-date">
+                <input type="date" id="viewDate" onchange="render()" />
+            </div>
+
+            <div class="summary" id="summary">
+                <span id="sumSalary">اضبط راتبك أول</span>
+            </div>
+
+            <div class="card">
+                <h2>⬇️ الثابت (نت + ايبال + فواتير)</h2>
+                <ul id="fixedList"></ul>
+                <div class="count" id="fixedTotal"></div>
+            </div>
+
+            <div class="card">
+                <h2>📝 المتغير</h2>
+                <ul id="varList"></ul>
+                <div class="count" id="varTotal"></div>
+            </div>
+
+            <div class="card">
+                <h2>🗓️ الأيام اللي فيها مصاريف</h2>
+                <div class="history" id="historyList"></div>
+            </div>
+
+            <button class="btn btn-danger" onclick="resetAll()">🗑️ مسح كل شيء</button>
+        </div>
+    </div>
+
+    <script>
+        const todayStr = () => new Date().toISOString().slice(0, 10);
+        let salary = parseFloat(localStorage.getItem('budget_salary')) || 0;
+        let records = JSON.parse(localStorage.getItem('budget_records')) || [];
+
+        function saveRecords() { localStorage.setItem('budget_records', JSON.stringify(records)); }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.getElementById('recordTab').style.display = tab === 'record' ? '' : 'none';
+            document.getElementById('viewTab').style.display = tab === 'view' ? '' : 'none';
+        }
+
+        function setSalary() {
+            const val = parseFloat(document.getElementById('salaryInput').value);
+            if (!isNaN(val)) {
+                salary = val;
+                localStorage.setItem('budget_salary', val);
+                document.getElementById('salarySaved').textContent = `الراتب المحفوظ: ${salary} ريال`;
+            }
+        }
+
+        function addExpense(kind) {
+            const date = document.getElementById('expDate').value || todayStr();
+            const name = document.getElementById('expName').value.trim();
+            const amount = parseFloat(document.getElementById('expAmount').value);
+            if (!name || isNaN(amount)) { alert('اكتب الاسم والمبلغ'); return; }
+            records.push({ date, name, amount, kind, id: Date.now() + Math.random() });
+            saveRecords();
+            document.getElementById('expName').value = '';
+            document.getElementById('expAmount').value = '';
+            document.getElementById('salarySaved').textContent = '';
+            alert('تمت الإضافة وحُفظت ✅');
+        }
+
+        function delRecord(id) {
+            records = records.filter(r => r.id !== id);
+            saveRecords();
+            render();
+        }
+
+        function sum(list) { return list.reduce((a, b) => a + b.amount, 0); }
+
+        function render() {
+            const date = document.getElementById('viewDate').value || todayStr();
+            document.getElementById('viewDate').value = date;
+            const dayRecs = records.filter(r => r.date === date);
+            const fixedList = dayRecs.filter(r => r.kind === 'fixed');
+            const varList = dayRecs.filter(r => r.kind === 'var');
+            const fixedSum = sum(fixedList);
+            const varSum = sum(varList);
+            const remaining = salary - fixedSum - varSum;
+
+            const sumEl = document.getElementById('sumSalary');
+            if (salary > 0) {
+                sumEl.innerHTML = `الراتب: <span class="big">${salary}</span>يوم: ${date}<br>
+                    الثابت: ${fixedSum} | المتغير: ${varSum} | الباقي: <b>${remaining}</b>`;
+                const el = document.getElementById('summary');
+                el.style.background = remaining < 0 ? '#e74c3c' : '#16a085';
+            } else {
+                sumEl.innerHTML = `لم ضبط الراتب بعد — اضبطه من تبويب تسجيل`;
+                document.getElementById('summary').style.background = '#16a085';
+            }
+
+            const fList = document.getElementById('fixedList');
+            fList.innerHTML = fixedList.length ? '' : '<li class="empty">لا مصاريف ثابتة في هذا اليوم</li>';
+            fixedList.forEach(r => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
+                    <span class="exp-amount">${r.amount}</span>
+                    <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
+                fList.appendChild(li);
+            });
+            document.getElementById('fixedTotal').textContent = fixedList.length ? `المجموع: ${fixedSum}` : '';
+
+            const vList = document.getElementById('varList');
+            vList.innerHTML = varList.length ? '' : '<li class="empty">لا مصاريف متغيرة في هذا اليوم</li>';
+            varList.forEach(r => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="exp-name">${escapeHtml(r.name)}</span>
+                    <span class="exp-amount">${r.amount}</span>
+                    <button class="del-btn" onclick="delRecord(${r.id})">حذف</button>`;
+                vList.appendChild(li);
+            });
+            document.getElementById('varTotal').textContent = varList.length ? `المجموع: ${varSum}` : '';
+
+            const hList = document.getElementById('historyList');
+            const dates = [...new Set(records.map(r => r.date))].sort().reverse();
+            hList.innerHTML = '';
+            if (dates.length === 0) hList.innerHTML = '<div class="empty">ما في مصاريف بعد</div>';
+            dates.forEach(d => {
+                const total = sum(records.filter(r => r.date === d));
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<span class="h-date">${d}</span><span>${total} ريال</span>`;
+                div.onclick = () => { document.getElementById('viewDate').value = d; render(); };
+                hList.appendChild(div);
+            });
+        }
+
+        function resetAll() {
+            if (confirm('متأكد تمسح الراتب وكل المصاريف نهائياً؟')) {
+                localStorage.removeItem('budget_salary');
+                localStorage.removeItem('budget_records');
+                salary = 0; records = [];
+                render();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('viewDate').value = todayStr();
+        document.getElementById('expDate').value = todayStr();
+        document.getElementById('salarySaved').textContent = salary > 0 ? `الراتب المحفوظ: ${salary} ريال` : '';
+        render();
+    </script>
+</body>
+</html>
