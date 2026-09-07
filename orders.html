@@ -130,10 +130,6 @@
                     <option value="">بدون</option>
                     <option value="عدد">عدد</option>
                     <option value="كيلو">كيلو</option>
-                    <option value="جرام">جرام</option>
-                    <option value="لتر">لتر</option>
-                    <option value="حبة">حبة</option>
-                    <option value="عبوة">عبوة</option>
                 </select>
             </div>
             <button class="btn btn-add" onclick="addTask()">إضافة</button>
@@ -156,7 +152,7 @@
         <div class="code-box">
             <h2>🔒 دخول العائلة</h2>
             <p>سجّل بحساب العائلة عشان تفتح القائمة المشتركة</p>
-            <input type="email" id="famEmail" placeholder="البريد الإلكتروني" value="family@lathem.com" />
+            <input type="email" id="famEmail" placeholder="البريد الإلكتروني" value="hatem@family.com" />
             <input type="password" id="famPass" placeholder="كلمة المرور" />
             <div class="err" id="codeErr">البريد أو كلمة المرور غير صحيحة</div>
             <button class="btn btn-add" style="width:100%" onclick="submitCode()">دخول</button>
@@ -166,7 +162,6 @@
     <script>
         const FB_API_KEY = 'AIzaSyBNQfKafqgRqmIfPPvXCDMc0V1tJ2w_RgE';
         const DB_URL = 'https://family-apps-e0076-default-rtdb.asia-southeast1.firebasedatabase.app/';
-        const FAMILY_EMAIL = 'family@lathem.com';
 
         let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         let currentFilter = 'all';
