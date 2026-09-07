@@ -36,10 +36,10 @@
         .input-row input:focus { border-color: #764ba2; }
         .qty-wrap {
             display: flex; flex-direction: column; gap: 4px; align-items: stretch;
-            justify-content: stretch;
+            justify-content: stretch; flex: 1.4;
         }
         .qty-input {
-            flex: 1; width: 82px; padding: 18px 4px; border: 2px solid #e0e0e0;
+            flex: 1; width: 100%; padding: 18px 6px; border: 2px solid #e0e0e0;
             border-radius: 8px; font-size: 15px; text-align: center; outline: none;
         }
         .qty-input:focus { border-color: #764ba2; }
@@ -54,7 +54,7 @@
             padding: 18px 14px; border: none; border-radius: 8px;
             cursor: pointer; font-size: 15px; color: #fff; transition: 0.2s;
         }
-        .btn-add { background: #27ae60; white-space: nowrap; font-weight: bold; align-self: stretch; }
+        .btn-add { background: #27ae60; white-space: nowrap; font-weight: bold; align-self: stretch; flex: 1.2; padding: 18px 10px; }
         .btn-add:hover { background: #1e8449; }
         .action-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
         .btn-action {
